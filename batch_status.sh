@@ -11,7 +11,7 @@
 # The output includes various statistics on system utilization.
 #
 # Author:       Summer Wang <xwang@osc.edu>
-# Date:         January 2017
+# Date:         March 2017
 
 # Global Defaults
 TIMEOUT_LIMIT="600"
@@ -56,14 +56,44 @@ showstats -q -t $RANGE --timeout=$TIMEOUT_LIMIT | sed "s/  */&:/g" |awk -vC0='\0
 
 cat <<EOF >>${SYSTEM}_${DATE}.dat
 
--- Low Efficiency Jobs (efficiency < 0.05 and CPU hours > value that is equivalent to 1 whole node for 24 hours)
+-- Low Efficiency Jobs (efficiency < 0.05 and CPU hours > value that is equivalent to 1 whole node for 48 hours): Top 20
  
 EOF
-cpu=$(($NODE*24))
+cpu=$(($NODE*48))
 
 
 mysql -hdbsys01.infra -uwebapp pbsacct --execute=" 
-SELECT username, jobid,(TIME_TO_SEC(cput)/3600.0)/(nproc*TIME_TO_SEC(walltime)/3600.0) AS efficiency, nproc*TIME_TO_SEC(walltime)/3600.0 FROM Jobs WHERE system LIKE '$SYSTEM' and (start_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) ) and (nproc*TIME_TO_SEC(walltime)/3600.0 > $cpu) and ((TIME_TO_SEC(cput)/3600.0)/(nproc*TIME_TO_SEC(walltime)/3600.0) < 0.05) ORDER by efficiency;" >>${SYSTEM}_${DATE}.dat
+SELECT username, jobid,(TIME_TO_SEC(cput)/3600.0)/(nproc*TIME_TO_SEC(walltime)/3600.0) AS efficiency FROM Jobs WHERE system LIKE '$SYSTEM' and (start_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) ) and (nproc*TIME_TO_SEC(walltime)/3600.0 > $cpu) and ((TIME_TO_SEC(cput)/3600.0)/(nproc*TIME_TO_SEC(walltime)/3600.0) < 0.05) ORDER by efficiency LIMIT 20;" >>${SYSTEM}_${DATE}.dat
+
+cat <<EOF >>${SYSTEM}_${DATE}.dat
+
+-- Poor memory request jobs (requesting memory explicitly and mem_used/mem_req < 0.05 and CPU hours > value that is equivalent to 1 whole node for 24 hours): Top 20
+ 
+EOF
+mysql -hdbsys01.infra -uwebapp pbsacct --execute="
+SELECT * 
+FROM
+(
+SELECT username, jobid, mem_req, nodes,
+case
+ when (LOWER(RIGHT(mem_req,2))) ='tb'
+ then 
+ mem_kb/(LEFT(mem_req,length(mem_req)-2)*1024*1024*1024)
+ when (LOWER(RIGHT(mem_req,2))) ='gb'
+ then 
+ mem_kb/(LEFT(mem_req,length(mem_req)-2)*1024*1024)
+ when (LOWER(RIGHT(mem_req,2))) ='mb'
+ then 
+ mem_kb/(LEFT(mem_req,length(mem_req)-2)*1024)
+ when (LOWER(RIGHT(mem_req,2))) ='kb'
+ then 
+ mem_kb/(LEFT(mem_req,length(mem_req)-2))
+ else
+ mem_kb/(LEFT(mem_req,length(mem_req)-2))*1024
+end as mem_eff
+FROM Jobs WHERE system LIKE '$SYSTEM' and (start_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) ) and mem_req !='' and (nproc*TIME_TO_SEC(walltime)/3600.0 > $cpu) 
+) s
+where mem_eff < 0.05 ORDER by mem_eff LIMIT 20;">>${SYSTEM}_${DATE}.dat
 
 
 
