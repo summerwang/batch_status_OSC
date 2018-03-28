@@ -1,1 +1,1 @@
-# batch_status_OSC
+It is used to generate reports for weekly production meeting
