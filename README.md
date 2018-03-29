@@ -1,1 +1,1 @@
-It is used to generate reports for weekly production meeting
+The script is used to generate reports for weekly production meeting

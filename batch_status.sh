@@ -96,6 +96,23 @@ FROM Jobs WHERE system LIKE '$SYSTEM' and (start_date >= DATE_SUB(CURDATE(), INT
 where mem_eff < 0.05 ORDER by mem_eff LIMIT 20;">>${SYSTEM}_${DATE}.dat
 
 
+cat <<EOF >>${SYSTEM}_${DATE}.dat
+
+-- GPU Users with queue time longer than 10 hours
+
+EOF
+mysql -hdbsys01.infra -uwebapp pbsacct --execute="
+SELECT * 
+FROM
+(
+SELECT username, AVG( TIMESTAMPDIFF(second, FROM_UNIXTIME(submit_ts), FROM_UNIXTIME(start_ts))/3600.0) as avg, COUNT(jobid) AS jobcount, SUM(nproc*TIME_TO_SEC(walltime))/3600.0 AS cpuhours from Jobs where system like '$SYSTEM' and (start_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)) and feature like 'gpu' GROUP BY username 
+) s
+where avg > 10.0 ORDER by avg DESC
+">>${SYSTEM}_${DATE}.dat
+
+
+
+
 
 cat <<EOF >>${SYSTEM}_${DATE}.dat
 
