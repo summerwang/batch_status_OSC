@@ -20,9 +20,10 @@ SYSTEM=$LMOD_SYSTEM_NAME
 CMD_REMOVE_EXTRAS="grep -v '^$'"
 DATE=`date +%y%m%d`
 
-if [[ $SYSTEM = *"oak"* ]]
+if [[ $SYSTEM = *"oakley"* ]]
 then
 	NODE=12
+	SYSTEM="oak"
 elif [[ $SYSTEM = *"ruby"* ]]
 then
 	NODE=20
