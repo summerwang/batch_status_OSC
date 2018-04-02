@@ -11,7 +11,7 @@
 # The output includes various statistics on system utilization.
 #
 # Author:       Summer Wang <xwang@osc.edu>
-# Date:         March 2017
+# Date:         April 2017
 
 # Global Defaults
 TIMEOUT_LIMIT="600"
@@ -63,19 +63,19 @@ EOF
 cpu=$(($NODE*48))
 
 
-mysql -hdbsys01.infra -uwebapp pbsacct --execute=" 
-SELECT username, jobid,(TIME_TO_SEC(cput)/3600.0)/(nproc*TIME_TO_SEC(walltime)/3600.0) AS efficiency FROM Jobs WHERE system LIKE '$SYSTEM' and (start_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) ) and (nproc*TIME_TO_SEC(walltime)/3600.0 > $cpu) and ((TIME_TO_SEC(cput)/3600.0)/(nproc*TIME_TO_SEC(walltime)/3600.0) < 0.05) ORDER by efficiency LIMIT 20;" >>${SYSTEM}_${DATE}.dat
+mysql -t  -hdbsys01.infra -uwebapp pbsacct --execute=" 
+SELECT username, jobid,(cput_sec)/(nproc*walltime_sec) AS efficiency FROM Jobs WHERE system LIKE '$SYSTEM' and (start_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) ) and (nproc*(walltime_sec)/3600.0 > $cpu) and (cput_sec/(nproc*walltime_sec)) < 0.05 ORDER by efficiency LIMIT 20;" >>${SYSTEM}_${DATE}.dat
 
 cat <<EOF >>${SYSTEM}_${DATE}.dat
 
--- Poor memory request jobs (requesting memory explicitly and mem_used/mem_req < 0.05 and CPU hours > value that is equivalent to 1 whole node for 24 hours): Top 20
+-- Poor memory request jobs (requesting memory explicitly and mem_used/mem_req < 0.05 and CPU hours > value that is equivalent to 1 whole node for 24 hours): Top 10
  
 EOF
-mysql -hdbsys01.infra -uwebapp pbsacct --execute="
+mysql -t -hdbsys01.infra -uwebapp pbsacct --execute="
 SELECT * 
 FROM
 (
-SELECT username, jobid, mem_req, nodes,
+SELECT username, jobid, mem_req, nodes, (cput_sec)/(nproc*walltime_sec) AS efficiency,
 case
  when (LOWER(RIGHT(mem_req,2))) ='tb'
  then 
@@ -92,21 +92,49 @@ case
  else
  mem_kb/(LEFT(mem_req,length(mem_req)-2))*1024
 end as mem_eff
-FROM Jobs WHERE system LIKE '$SYSTEM' and (start_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) ) and mem_req !='' and (nproc*TIME_TO_SEC(walltime)/3600.0 > $cpu) 
+FROM Jobs WHERE system LIKE '$SYSTEM' and (start_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) ) and mem_req !='' and (nproc*(walltime_sec)/3600.0 > $cpu) 
 ) s
-where mem_eff < 0.05 ORDER by mem_eff LIMIT 20;">>${SYSTEM}_${DATE}.dat
+where mem_eff < 0.05 ORDER by mem_eff LIMIT 10;">>${SYSTEM}_${DATE}.dat
 
+
+cat <<EOF >>${SYSTEM}_${DATE}.dat
+
+-- Huge memory users: Top 20
+
+EOF
+if [[ $SYSTEM = *"oak"* ]]
+then
+
+HUGEMEM=$((1024*1024*1024))
+
+elif [[ $SYSTEM = *"ruby"* ]]
+then
+
+HUGEMEM=$((1024*1024*1024))
+
+elif [[ $SYSTEM = *"owens"* ]]
+then
+
+HUGEMEM=$((1.5*1024*1024*1024))
+
+else
+        echo "system is not in the list. Double check the script"
+fi
+
+mysql -t  -hdbsys01.infra -uwebapp pbsacct --execute="
+SELECT username, AVG( TIMESTAMPDIFF(second, FROM_UNIXTIME(submit_ts), FROM_UNIXTIME(start_ts))/3600.0) as avg_wait_time, COUNT(jobid) AS jobcount, SUM(nproc*(walltime_sec))/3600.0 AS cpuhours, (cput_sec)/(nproc*walltime_sec) AS job_efficiency, AVG(mem_kb)/$HUGEMEM as mem_efficency  from Jobs where system like '$SYSTEM' and (start_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)) and queue like 'hugemem' GROUP BY username ORDER by cpuhours DESC LIMIT 20
+">>${SYSTEM}_${DATE}.dat
 
 cat <<EOF >>${SYSTEM}_${DATE}.dat
 
 -- GPU Users with queue time longer than 10 hours
 
 EOF
-mysql -hdbsys01.infra -uwebapp pbsacct --execute="
+mysql -t -hdbsys01.infra -uwebapp pbsacct --execute="
 SELECT * 
 FROM
 (
-SELECT username, AVG( TIMESTAMPDIFF(second, FROM_UNIXTIME(submit_ts), FROM_UNIXTIME(start_ts))/3600.0) as avg, COUNT(jobid) AS jobcount, SUM(nproc*TIME_TO_SEC(walltime))/3600.0 AS cpuhours from Jobs where system like '$SYSTEM' and (start_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)) and feature like 'gpu' GROUP BY username 
+SELECT username, AVG( TIMESTAMPDIFF(second, FROM_UNIXTIME(submit_ts), FROM_UNIXTIME(start_ts))/3600.0) as avg, COUNT(jobid) AS jobcount, SUM(nproc*(walltime_sec))/3600.0 AS cpuhours from Jobs where system like '$SYSTEM' and (start_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)) and feature like '%gpu%' GROUP BY username 
 ) s
 where avg > 10.0 ORDER by avg DESC
 ">>${SYSTEM}_${DATE}.dat
