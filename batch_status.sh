@@ -115,7 +115,7 @@ HUGEMEM=$((1024*1024*1024))
 elif [[ $SYSTEM = *"owens"* ]]
 then
 
-HUGEMEM=$((1.5*1024*1024*1024))
+HUGEMEM=$((1024*1024*1536))
 
 else
         echo "system is not in the list. Double check the script"
