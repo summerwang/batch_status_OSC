@@ -68,7 +68,7 @@ SELECT username, jobid,(cput_sec)/(nproc*walltime_sec) AS efficiency FROM Jobs W
 
 cat <<EOF >>${SYSTEM}_${DATE}.dat
 
--- Poor memory request jobs (requesting memory explicitly and mem_used/mem_req < 0.05 and CPU hours > value that is equivalent to 1 whole node for 24 hours): Top 10
+-- Poor memory request jobs (requesting memory explicitly and mem_used/mem_req < 0.05 and CPU hours > value that is equivalent to 1 whole node for 48 hours): Top 20
  
 EOF
 mysql -t -hdbsys01.infra -uwebapp pbsacct --execute="
@@ -94,7 +94,7 @@ case
 end as mem_eff
 FROM Jobs WHERE system LIKE '$SYSTEM' and (start_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) ) and mem_req !='' and (nproc*(walltime_sec)/3600.0 > $cpu) 
 ) s
-where mem_eff < 0.05 ORDER by mem_eff LIMIT 10;">>${SYSTEM}_${DATE}.dat
+where mem_eff < 0.05 ORDER by mem_eff LIMIT 20;">>${SYSTEM}_${DATE}.dat
 
 
 cat <<EOF >>${SYSTEM}_${DATE}.dat
