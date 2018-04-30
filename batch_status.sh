@@ -148,11 +148,11 @@ cat <<EOF >>${SYSTEM}_${DATE}.dat
 -- Blocked Jobs
 Are any of these forgotten?  Non-runnable?
 EOF
-showq -b | grep -v -E 'blocked|jobs|JOBID|^$' |sort -r -k1,2 |awk '{ c[$2]++; t[$2]=$7" "$8" "$9" "$10} END {  print "Job Count,", "User,", "Oldest Queue Time";for (i in c) print c[i],",", i,",", t[i]}'|column -t -s ',' >temp1.dat
+showq -b | grep -v -E 'blocked|jobs|JOBID|^$' | grep -v 'NOTE' | sort -r -k1,2 |awk '{ c[$2]++; t[$2]=$7" "$8" "$9" "$10} END {  print "Job Count,", "User,", "Oldest Queue Time";for (i in c) print c[i],",", i,",", t[i]}'|column -t -s ',' >temp1.dat
 echo > temp2.dat
 sed 1d temp1.dat | awk '{print $2}'|xargs finger |grep Name | awk '{$1=$2=$3="";print}' >> temp2.dat
 awk 'NR==FNR{a[NR]=$0;next}{print a[FNR],$0}' temp1.dat temp2.dat >>${SYSTEM}_${DATE}.dat
-rm temp*.dat
+#rm temp*.dat
 
 
 cat <<EOF >>${SYSTEM}_${DATE}.dat
