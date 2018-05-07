@@ -152,7 +152,7 @@ showq -b | grep -v -E 'blocked|jobs|JOBID|^$' | grep -v 'NOTE' | sort -r -k1,2 |
 echo > temp2.dat
 sed 1d temp1.dat | awk '{print $2}'|xargs finger |grep Name | awk '{$1=$2=$3="";print}' >> temp2.dat
 awk 'NR==FNR{a[NR]=$0;next}{print a[FNR],$0}' temp1.dat temp2.dat >>${SYSTEM}_${DATE}.dat
-#rm temp*.dat
+rm temp*.dat
 
 
 cat <<EOF >>${SYSTEM}_${DATE}.dat
