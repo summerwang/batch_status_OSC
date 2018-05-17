@@ -20,6 +20,9 @@ SYSTEM=$LMOD_SYSTEM_NAME
 CMD_REMOVE_EXTRAS="grep -v '^$'"
 DATE=`date +%y%m%d`
 
+TMP=`mktemp -d system.XXXXXXXX`
+cd $TMP
+
 if [[ $SYSTEM = *"oakley"* ]]
 then
 	NODE=12
@@ -170,6 +173,8 @@ cat <<EOF >>${SYSTEM}_${DATE}.dat
  
 -- Non-Job Reservations
 EOF
-showres | grep -v debug* | awk '$2 == "User" { print $0 }' >>${SYSTEM}_${DATE}.dat
+showres | grep -v Job* | awk '$2 == "User" { print $0 }' >>${SYSTEM}_${DATE}.dat
 
-
+cd ..
+cp $TMP/${SYSTEM}_${DATE}.dat .
+rm -rf $TMP
