@@ -1,4 +1,10 @@
-#!/bin/bash
+#PBS -N system_status
+#PBS -S /bin/bash
+#PBS -j oe
+#PBS -l nodes=1:ppn=1
+#PBS -l walltime=00:30:00
+#PBS -A PZS0200
+
 ##############################################################################
 # batch_status.sh
 #
@@ -11,7 +17,9 @@
 # The output includes various statistics on system utilization.
 #
 # Author:       Summer Wang <xwang@osc.edu>
-# Date:         April 2017
+# Date:         May 2017
+
+cd /users/oscgen/xwang/support/batch/
 
 # Global Defaults
 TIMEOUT_LIMIT="600"
