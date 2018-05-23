@@ -1,9 +1,9 @@
-#PBS -N system_status
+#PBS -N productionmeeting_systemstatus
 #PBS -S /bin/bash
 #PBS -j oe
 #PBS -l nodes=1:ppn=1
 #PBS -l walltime=00:30:00
-#PBS -A PZS0200
+#PBS -A PZS0645
 
 ##############################################################################
 # batch_status.sh
@@ -19,7 +19,7 @@
 # Author:       Summer Wang <xwang@osc.edu>
 # Date:         May 2017
 
-cd /users/oscgen/xwang/support/batch/
+cd ~support/log/production_meeting/batch
 
 # Global Defaults
 TIMEOUT_LIMIT="600"
