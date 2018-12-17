@@ -17,7 +17,7 @@
 # The output includes various statistics on system utilization.
 #
 # Author:       Summer Wang <xwang@osc.edu>
-# Date:         May 2017
+# Date:         Dec 2018
 
 cd ~support/log/production_meeting/batch
 
@@ -31,10 +31,9 @@ DATE=`date +%y%m%d`
 TMP=`mktemp -d system.XXXXXXXX`
 cd $TMP
 
-if [[ $SYSTEM = *"oakley"* ]]
+if [[ $SYSTEM = *"pitzer"* ]]
 then
-	NODE=12
-	SYSTEM="oak"
+	NODE=40
 elif [[ $SYSTEM = *"ruby"* ]]
 then
 	NODE=20
@@ -113,10 +112,10 @@ cat <<EOF >>${SYSTEM}_${DATE}.dat
 -- Huge memory users: Top 20
 
 EOF
-if [[ $SYSTEM = *"oak"* ]]
+if [[ $SYSTEM = *"pitzer"* ]]
 then
 
-HUGEMEM=$((1024*1024*1024))
+HUGEMEM=$((1024*1024*1024*3))
 
 elif [[ $SYSTEM = *"ruby"* ]]
 then
