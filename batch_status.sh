@@ -67,25 +67,39 @@ showstats -q -t $RANGE --timeout=$TIMEOUT_LIMIT | sed "s/  */&:/g" |awk -vC0='\0
 
 cat <<EOF >>${SYSTEM}_${DATE}.dat
 
--- Low Efficiency Jobs (efficiency < 0.05 and CPU hours > value that is equivalent to 1 whole node for 48 hours): Top 20
+-- Low Efficiency Non-OnDemand Jobs (efficiency < 0.10 and CPU hours > value that is equivalent to 1 whole node for 48 hours): Top 20
  
 EOF
 cpu=$(($NODE*48))
 
 
 mysql -t  -hdbsys01.infra -uwebapp pbsacct --execute=" 
-SELECT username, jobid,(cput_sec)/(nproc*walltime_sec) AS efficiency FROM Jobs WHERE system LIKE '$SYSTEM' and (start_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) ) and (nproc*(walltime_sec)/3600.0 > $cpu) and (cput_sec/(nproc*walltime_sec)) < 0.05 ORDER by efficiency LIMIT 20;" >>${SYSTEM}_${DATE}.dat
+SELECT username, account, jobid,(cput_sec)/(nproc*walltime_sec) AS efficiency FROM Jobs WHERE system LIKE '$SYSTEM' and (start_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) ) and (nproc*(walltime_sec)/3600.0 > $cpu) and (cput_sec/(nproc*walltime_sec)) < 0.10 and script NOT LIKE '%ondemand-vnc%' ORDER by efficiency LIMIT 20;" >>${SYSTEM}_${DATE}.dat
 
 cat <<EOF >>${SYSTEM}_${DATE}.dat
 
--- Poor memory request jobs (requesting memory explicitly and mem_used/mem_req < 0.05 and CPU hours > value that is equivalent to 1 whole node for 48 hours): Top 20
+
+-- Low Efficiency OnDemand Jobs (efficiency < 0.10 and CPU hours > value that is equivalent to 1 whole node for 48 hours): Top 20
+ 
+EOF
+cpu=$(($NODE*48))
+
+
+mysql -t  -hdbsys01.infra -uwebapp pbsacct --execute=" 
+SELECT username, account, jobid,(cput_sec)/(nproc*walltime_sec) AS efficiency FROM Jobs WHERE system LIKE '$SYSTEM' and (start_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) ) and (nproc*(walltime_sec)/3600.0 > $cpu) and (cput_sec/(nproc*walltime_sec)) < 0.10 and script LIKE '%ondemand-vnc%' ORDER by efficiency LIMIT 20;" >>${SYSTEM}_${DATE}.dat
+
+cat <<EOF >>${SYSTEM}_${DATE}.dat
+
+
+
+-- Poor memory request jobs (requesting memory explicitly and mem_used/mem_req < 0.05 and job efficiency < 0.10 and CPU hours > value that is equivalent to 1 whole node for 48 hours): Top 20
  
 EOF
 mysql -t -hdbsys01.infra -uwebapp pbsacct --execute="
 SELECT * 
 FROM
 (
-SELECT username, jobid, mem_req, nodes, (cput_sec)/(nproc*walltime_sec) AS efficiency,
+SELECT username, account, jobid, mem_req, nodes, (cput_sec)/(nproc*walltime_sec) AS efficiency,
 case
  when (LOWER(RIGHT(mem_req,2))) ='tb'
  then 
@@ -102,10 +116,9 @@ case
  else
  mem_kb/(LEFT(mem_req,length(mem_req)-2))*1024
 end as mem_eff
-FROM Jobs WHERE system LIKE '$SYSTEM' and (start_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) ) and mem_req !='' and (nproc*(walltime_sec)/3600.0 > $cpu) 
+FROM Jobs WHERE system LIKE '$SYSTEM' and (start_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) ) and mem_req !='' and (cput_sec/(nproc*walltime_sec)) < 0.10 and (nproc*(walltime_sec)/3600.0 > $cpu) 
 ) s
 where mem_eff < 0.05 ORDER by mem_eff LIMIT 20;">>${SYSTEM}_${DATE}.dat
-
 
 cat <<EOF >>${SYSTEM}_${DATE}.dat
 
@@ -132,7 +145,7 @@ else
 fi
 
 mysql -t  -hdbsys01.infra -uwebapp pbsacct --execute="
-SELECT username, AVG( TIMESTAMPDIFF(second, FROM_UNIXTIME(submit_ts), FROM_UNIXTIME(start_ts))/3600.0) as avg_wait_time, COUNT(jobid) AS jobcount, SUM(nproc*(walltime_sec))/3600.0 AS cpuhours, (cput_sec)/(nproc*walltime_sec) AS job_efficiency, AVG(mem_kb)/$HUGEMEM as mem_efficency  from Jobs where system like '$SYSTEM' and (start_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)) and queue like 'hugemem' GROUP BY username ORDER by cpuhours DESC LIMIT 20
+SELECT username, account, AVG( TIMESTAMPDIFF(second, FROM_UNIXTIME(submit_ts), FROM_UNIXTIME(start_ts))/3600.0) as avg_wait_time, COUNT(jobid) AS jobcount, SUM(nproc*(walltime_sec))/3600.0 AS cpuhours, (cput_sec)/(nproc*walltime_sec) AS job_efficiency, AVG(mem_kb)/$HUGEMEM as mem_efficency  from Jobs where system like '$SYSTEM' and (start_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)) and queue like 'hugemem' GROUP BY username ORDER by cpuhours DESC LIMIT 20
 ">>${SYSTEM}_${DATE}.dat
 
 cat <<EOF >>${SYSTEM}_${DATE}.dat
@@ -144,7 +157,7 @@ mysql -t -hdbsys01.infra -uwebapp pbsacct --execute="
 SELECT * 
 FROM
 (
-SELECT username, AVG( TIMESTAMPDIFF(second, FROM_UNIXTIME(submit_ts), FROM_UNIXTIME(start_ts))/3600.0) as avg, COUNT(jobid) AS jobcount, SUM(nproc*(walltime_sec))/3600.0 AS cpuhours from Jobs where system like '$SYSTEM' and (start_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)) and feature like '%gpu%' GROUP BY username 
+SELECT username, account, AVG( TIMESTAMPDIFF(second, FROM_UNIXTIME(submit_ts), FROM_UNIXTIME(start_ts))/3600.0) as avg, COUNT(jobid) AS jobcount, SUM(nproc*(walltime_sec))/3600.0 AS cpuhours from Jobs where system like '$SYSTEM' and (start_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)) and feature like '%gpu%' GROUP BY username 
 ) s
 where avg > 10.0 ORDER by avg DESC
 ">>${SYSTEM}_${DATE}.dat
@@ -180,7 +193,7 @@ cat <<EOF >>${SYSTEM}_${DATE}.dat
  
 -- Non-Job Reservations
 EOF
-showres | grep -v Job* | awk '$2 == "User" { print $0 }' >>${SYSTEM}_${DATE}.dat
+showres | grep -v "Job*\|debug" | awk '$2 == "User" { print $0 }' >>${SYSTEM}_${DATE}.dat
 
 cd ..
 cp $TMP/${SYSTEM}_${DATE}.dat .
