@@ -74,7 +74,7 @@ cpu=$(($NODE*48))
 
 
 mysql -t  -hdbsys01.infra -uwebapp pbsacct --execute=" 
-SELECT username, account, jobid,(cput_sec)/(nproc*walltime_sec) AS efficiency FROM Jobs WHERE system LIKE '$SYSTEM' and (start_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) ) and (nproc*(walltime_sec)/3600.0 > $cpu) and (cput_sec/(nproc*walltime_sec)) < 0.10 and script NOT LIKE '%ondemand-vnc%' ORDER by efficiency LIMIT 20;" >>${SYSTEM}_${DATE}.dat
+SELECT username, account, jobid,(cput_sec)/(nproc*walltime_sec) AS efficiency FROM Jobs WHERE system LIKE '$SYSTEM' and (start_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) ) and (nproc*(walltime_sec)/3600.0 > $cpu) and (cput_sec/(nproc*walltime_sec)) < 0.10 and ((script NOT LIKE '%ondemand-vnc%') and (script NOT LIKE '%module restore%')) ORDER by efficiency LIMIT 20;" >>${SYSTEM}_${DATE}.dat
 
 cat <<EOF >>${SYSTEM}_${DATE}.dat
 
@@ -86,7 +86,7 @@ cpu=$(($NODE*48))
 
 
 mysql -t  -hdbsys01.infra -uwebapp pbsacct --execute=" 
-SELECT username, account, jobid,(cput_sec)/(nproc*walltime_sec) AS efficiency FROM Jobs WHERE system LIKE '$SYSTEM' and (start_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) ) and (nproc*(walltime_sec)/3600.0 > $cpu) and (cput_sec/(nproc*walltime_sec)) < 0.10 and script LIKE '%ondemand-vnc%' ORDER by efficiency LIMIT 20;" >>${SYSTEM}_${DATE}.dat
+SELECT username, account, jobid,(cput_sec)/(nproc*walltime_sec) AS efficiency FROM Jobs WHERE system LIKE '$SYSTEM' and (start_date >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) ) and (nproc*(walltime_sec)/3600.0 > $cpu) and (cput_sec/(nproc*walltime_sec)) < 0.10 and ((script LIKE '%ondemand-vnc%') OR (script LIKE '%module restore%')) ORDER by efficiency LIMIT 20;" >>${SYSTEM}_${DATE}.dat
 
 cat <<EOF >>${SYSTEM}_${DATE}.dat
 
